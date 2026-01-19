@@ -45,6 +45,8 @@ import fr.paris.lutece.plugins.grubusiness.business.notification.Notification;
 import fr.paris.lutece.plugins.grubusiness.service.notification.NotificationException;
 import fr.paris.lutece.plugins.notificationstore.dto.DemandTypeDto;
 
+import javax.inject.Inject;
+import javax.inject.Named;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -53,6 +55,10 @@ public class NotificationListener implements INotificationListener
 {
 
     private static final Logger logger = Logger.getLogger( NotificationListener.class.getName( ) );
+
+    @Inject
+    @Named("notificationstorepush.notificationlistener")
+    private MessagingService messagingService;
 
     @Override
     public void onCreateNotification( final Notification notification )
@@ -65,7 +71,7 @@ public class NotificationListener implements INotificationListener
             {
                 final Customer customer = demand.getCustomer( );
                 final List<String> registrationTokens = RegistrationTokenService.getRegistrationTokens( customer );
-                MessagingService.getInstance( ).buildAndSendMessage( registrationTokens, demandType );
+                messagingService.buildAndSendMessage( registrationTokens, demandType );
             }
         }
         catch( DeviceRegistrationException e )

@@ -58,8 +58,6 @@ public class MessagingService
 
     public static final String SERVICE_ACCOUNT_PATH = "fr/paris/lutece/modules/notificationstorepush/resources/service-account.json";
 
-    private static MessagingService instance;
-
     private MessagingService( )
     {
         try
@@ -80,15 +78,6 @@ public class MessagingService
         {
             logger.log( Level.SEVERE, "Problem while trying to fetch properties.", e );
         }
-    }
-
-    public static MessagingService getInstance( )
-    {
-        if ( instance == null )
-        {
-            instance = new MessagingService( );
-        }
-        return instance;
     }
 
     public void buildAndSendMessage( final List<String> registrationTokens, final DemandTypeDto demandType ) throws FirebaseMessagingException
