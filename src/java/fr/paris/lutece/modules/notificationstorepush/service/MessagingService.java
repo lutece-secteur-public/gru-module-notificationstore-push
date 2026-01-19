@@ -41,9 +41,8 @@ import com.google.firebase.messaging.FirebaseMessaging;
 import com.google.firebase.messaging.FirebaseMessagingException;
 import com.google.firebase.messaging.MulticastMessage;
 import fr.paris.lutece.modules.notificationstorepush.business.NotificationListener;
-import fr.paris.lutece.plugins.notificationstore.dto.DemandTypeDto;
+import fr.paris.lutece.portal.service.util.AppPropertiesService;
 
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.List;
@@ -56,23 +55,22 @@ public class MessagingService
 
     private static final Logger logger = Logger.getLogger( MessagingService.class.getName( ) );
 
-    public static final String SERVICE_ACCOUNT_PATH = "fr/paris/lutece/modules/notificationstorepush/resources/service-account.json";
+    public static final String SERVICE_ACCOUNT_PATH = AppPropertiesService.getProperty("module.messaging.serviceAccount.path");
 
     private MessagingService( )
     {
         try
         {
             final InputStream serviceAccountStream = NotificationListener.class.getClassLoader( ).getResourceAsStream( SERVICE_ACCOUNT_PATH );
-            if ( Objects.isNull( serviceAccountStream ) )
+            if ( Objects.nonNull( serviceAccountStream ) )
             {
-                throw new FileNotFoundException( "ServiceAccount file not found in the resources directory" );
+                final FirebaseOptions options = FirebaseOptions.builder( ).setCredentials( GoogleCredentials.fromStream( serviceAccountStream ) ).build( );
+                FirebaseApp.initializeApp( options );
             }
-            final FirebaseOptions options = FirebaseOptions.builder( ).setCredentials( GoogleCredentials.fromStream( serviceAccountStream ) ).build( );
-            FirebaseApp.initializeApp( options );
-        }
-        catch( FileNotFoundException e )
-        {
-            logger.log( Level.SEVERE, "ServiceAccount file not found in the resources directory", e );
+            else
+            {
+                logger.log( Level.SEVERE, "ServiceAccount file not found in the resources directory" );
+            }
         }
         catch( IOException e )
         {
@@ -80,10 +78,11 @@ public class MessagingService
         }
     }
 
-    public void buildAndSendMessage( final List<String> registrationTokens, final DemandTypeDto demandType ) throws FirebaseMessagingException
+    public void send( final List<String> registrationTokens, final String title, final String body ) throws FirebaseMessagingException
     {
-        MulticastMessage message = MulticastMessage.builder( ).setNotification( com.google.firebase.messaging.Notification.builder( )
-                .setTitle( demandType.getLabel( ) ).setBody( demandType.getNotificationDescription( ) ).build( ) ).addAllTokens( registrationTokens ).build( );
+        MulticastMessage message = MulticastMessage.builder( )
+                .setNotification( com.google.firebase.messaging.Notification.builder( ).setTitle( title ).setBody( body ).build( ) )
+                .addAllTokens( registrationTokens ).build( );
         BatchResponse response = FirebaseMessaging.getInstance( ).sendEachForMulticast( message );
         if ( response.getFailureCount( ) > 0 )
         {

@@ -70,6 +70,7 @@
         <componentName>notificationstorepush</componentName>
         <jiraProjectName>NOTIFICATIONSTOREPUSH</jiraProjectName>
         <jiraComponentId />
+        <java.version>11</java.version>
     </properties>
 
     <build>

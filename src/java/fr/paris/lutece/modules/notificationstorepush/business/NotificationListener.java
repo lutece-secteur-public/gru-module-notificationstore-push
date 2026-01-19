@@ -34,20 +34,23 @@
 package fr.paris.lutece.modules.notificationstorepush.business;
 
 import com.google.firebase.messaging.FirebaseMessagingException;
-import fr.paris.lutece.modules.notificationstorepush.service.DemandTypeService;
 import fr.paris.lutece.modules.notificationstorepush.service.MessagingService;
-import fr.paris.lutece.modules.notificationstorepush.service.RegistrationTokenService;
 import fr.paris.lutece.plugins.deviceregistration.exception.DeviceRegistrationException;
+import fr.paris.lutece.plugins.deviceregistration.service.DeviceRegistrationService;
 import fr.paris.lutece.plugins.grubusiness.business.customer.Customer;
-import fr.paris.lutece.plugins.grubusiness.business.demand.Demand;
 import fr.paris.lutece.plugins.grubusiness.business.notification.INotificationListener;
+import fr.paris.lutece.plugins.grubusiness.business.notification.MyDashboardNotification;
 import fr.paris.lutece.plugins.grubusiness.business.notification.Notification;
-import fr.paris.lutece.plugins.grubusiness.service.notification.NotificationException;
+import fr.paris.lutece.plugins.notificationstore.business.DemandTypeHome;
 import fr.paris.lutece.plugins.notificationstore.dto.DemandTypeDto;
+import fr.paris.lutece.plugins.notificationstore.utils.NotificationStoreUtils;
+import fr.paris.lutece.portal.service.util.AppPropertiesService;
 
 import javax.inject.Inject;
 import javax.inject.Named;
+import javax.persistence.EntityNotFoundException;
 import java.util.List;
+import java.util.Objects;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -55,37 +58,51 @@ public class NotificationListener implements INotificationListener
 {
 
     private static final Logger logger = Logger.getLogger( NotificationListener.class.getName( ) );
+    private static final String DEFAULT_ISSUER = AppPropertiesService.getProperty( "module.notificationstore.defaultIssuer" );
 
     @Inject
-    @Named("notificationstorepush.notificationlistener")
+    @Named("notificationstorepush.messagingservice")
     private MessagingService messagingService;
 
     @Override
     public void onCreateNotification( final Notification notification )
     {
-        try
+        if ( Objects.nonNull( notification ) && Objects.nonNull( notification.getDemand( ) ) && Objects.nonNull( notification.getDemand( ).getCustomer( ) ) )
         {
-            final Demand demand = notification.getDemand( );
-            final DemandTypeDto demandType = DemandTypeService.getInstance( ).getDemandType( notification );
+            final String typeId = notification.getDemand( ).getTypeId( );
+            final DemandTypeDto demandType = DemandTypeHome.getDemandType( typeId ).map( NotificationStoreUtils::toDto )
+                    .orElseThrow( ( ) -> new EntityNotFoundException( "Demandtype not found with id " + typeId ) );
+
             if ( demandType.isPushEnable( ) )
             {
-                final Customer customer = demand.getCustomer( );
-                final List<String> registrationTokens = RegistrationTokenService.getRegistrationTokens( customer );
-                messagingService.buildAndSendMessage( registrationTokens, demandType );
+                try
+                {
+                    final Customer customer = notification.getDemand( ).getCustomer( );
+                    final List<String> registrationTokens = DeviceRegistrationService.getInstance( ).getRegistrationTokensByCriteria( customer.getCustomerId( ),
+                            customer.getConnectionId( ), DEFAULT_ISSUER );
+
+                    String body = demandType.getNotificationDescription( );
+                    final MyDashboardNotification myDashboardNotification = notification.getMyDashboardNotification( );
+
+                    if ( Objects.nonNull( myDashboardNotification ) && !myDashboardNotification.getSubject( ).isEmpty( ) )
+                    {
+                        body = myDashboardNotification.getSubject( );
+                    }
+
+                    messagingService.send( registrationTokens, demandType.getLabel( ), body );
+                }
+                catch( DeviceRegistrationException e )
+                {
+                    logger.log( Level.WARNING, "Error while retrieving user token with message : {0}", e.getMessage( ) );
+                }
+                catch( FirebaseMessagingException e )
+                {
+                    logger.log( Level.WARNING, "Error while sending message : {0}", e.getMessage( ) );
+                }
+
             }
         }
-        catch( DeviceRegistrationException e )
-        {
-            logger.log( Level.WARNING, "Error while retrieving user token with message : {0}", e.getMessage( ) );
-        }
-        catch( FirebaseMessagingException e )
-        {
-            logger.log( Level.WARNING, "Error while sending message." );
-        }
-        catch( NotificationException e )
-        {
-            logger.log( Level.WARNING, e.getMessage( ) );
-        }
+
     }
 
     @Override
