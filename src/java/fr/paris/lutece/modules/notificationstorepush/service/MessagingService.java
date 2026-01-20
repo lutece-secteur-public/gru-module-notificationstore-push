@@ -46,6 +46,7 @@ import fr.paris.lutece.portal.service.util.AppPropertiesService;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -55,7 +56,7 @@ public class MessagingService
 
     private static final Logger logger = Logger.getLogger( MessagingService.class.getName( ) );
 
-    public static final String SERVICE_ACCOUNT_PATH = AppPropertiesService.getProperty("module.messaging.serviceAccount.path");
+    public static final String SERVICE_ACCOUNT_PATH = AppPropertiesService.getProperty( "module.messaging.serviceAccount.path" );
 
     private MessagingService( )
     {
@@ -78,10 +79,11 @@ public class MessagingService
         }
     }
 
-    public void send( final List<String> registrationTokens, final String title, final String body ) throws FirebaseMessagingException
+    public void send( final List<String> registrationTokens, final String title, final String body, final Map<String, String> metadata )
+            throws FirebaseMessagingException
     {
         MulticastMessage message = MulticastMessage.builder( )
-                .setNotification( com.google.firebase.messaging.Notification.builder( ).setTitle( title ).setBody( body ).build( ) )
+                .setNotification( com.google.firebase.messaging.Notification.builder( ).setTitle( title ).setBody( body ).build( ) ).putAllData( metadata )
                 .addAllTokens( registrationTokens ).build( );
         BatchResponse response = FirebaseMessaging.getInstance( ).sendEachForMulticast( message );
         if ( response.getFailureCount( ) > 0 )
