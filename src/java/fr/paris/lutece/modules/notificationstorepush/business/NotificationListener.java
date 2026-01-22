@@ -38,6 +38,7 @@ import fr.paris.lutece.modules.notificationstorepush.service.MessagingService;
 import fr.paris.lutece.plugins.deviceregistration.exception.DeviceRegistrationException;
 import fr.paris.lutece.plugins.deviceregistration.service.DeviceRegistrationService;
 import fr.paris.lutece.plugins.grubusiness.business.customer.Customer;
+import fr.paris.lutece.plugins.grubusiness.business.demand.Demand;
 import fr.paris.lutece.plugins.grubusiness.business.demand.DemandType;
 import fr.paris.lutece.plugins.grubusiness.business.notification.INotificationListener;
 import fr.paris.lutece.plugins.grubusiness.business.notification.MyDashboardNotification;
@@ -60,7 +61,7 @@ public class NotificationListener implements INotificationListener
 
     private static final Logger logger = Logger.getLogger( NotificationListener.class.getName( ) );
     private static final String DEFAULT_ISSUER = AppPropertiesService.getProperty( "module.notificationstore.defaultIssuer" );
-    public static final String NOTIFICATION_METADATA_REFERENCE = "reference";
+    public static final String NOTIFICATION_METADATA_DEMAND_ID = "demand_id";
     public static final String NOTIFICATION_METADATA_TYPE_ID = "type_id";
     public static final String NOTIFICATION_METADATA_CUID = "CUID";
     public static final String NOTIFICATION_METADATA_GUID = "GUID";
@@ -95,7 +96,7 @@ public class NotificationListener implements INotificationListener
                         body = myDashboardNotification.getSubject( );
                     }
 
-                    final Map<String, String> metadata = prepareMetaDataFromNotification(notification);
+                    final Map<String, String> metadata = prepareMetaDataFromNotification( notification );
 
                     messagingService.send( registrationTokens, demandType.getLabel( ), body, metadata );
                 }
@@ -113,14 +114,24 @@ public class NotificationListener implements INotificationListener
 
     }
 
-    private Map<String, String> prepareMetaDataFromNotification(final Notification notification) {
-        Map<String, String> metadata = new HashMap<>();
-        metadata.put(NOTIFICATION_METADATA_REFERENCE, notification.getDemand( ).getReference( ));
-        metadata.put(NOTIFICATION_METADATA_TYPE_ID, notification.getDemand().getTypeId());
-        metadata.put(NOTIFICATION_METADATA_CUID, notification.getDemand().getCustomer().getCustomerId( ));
-        metadata.put(NOTIFICATION_METADATA_GUID, notification.getDemand().getCustomer().getConnectionId( ));
-        if(Objects.nonNull(notification.getDate())) {
-            metadata.put(NOTIFICATION_METADATA_DATE, notification.getDate().toString());
+    private Map<String, String> prepareMetaDataFromNotification( final Notification notification )
+    {
+        Map<String, String> metadata = new HashMap<>( );
+        final Demand demand = notification.getDemand( );
+        metadata.put( NOTIFICATION_METADATA_DEMAND_ID, demand.getId( ) );
+        metadata.put( NOTIFICATION_METADATA_TYPE_ID, demand.getTypeId( ) );
+        final Customer customer = demand.getCustomer( );
+        if ( Objects.nonNull( customer.getCustomerId( ) ) )
+        {
+            metadata.put( NOTIFICATION_METADATA_CUID, customer.getCustomerId( ) );
+        }
+        if ( Objects.nonNull( customer.getConnectionId( ) ) )
+        {
+            metadata.put( NOTIFICATION_METADATA_GUID, customer.getConnectionId( ) );
+        }
+        if ( Objects.nonNull( notification.getDate( ) ) )
+        {
+            metadata.put( NOTIFICATION_METADATA_DATE, notification.getDate( ).toString( ) );
         }
         return metadata;
     }
