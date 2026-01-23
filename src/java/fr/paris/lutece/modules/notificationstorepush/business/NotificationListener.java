@@ -49,6 +49,11 @@ import fr.paris.lutece.portal.service.util.AppPropertiesService;
 import javax.inject.Inject;
 import javax.inject.Named;
 import javax.persistence.EntityNotFoundException;
+import java.sql.Timestamp;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -131,7 +136,10 @@ public class NotificationListener implements INotificationListener
         }
         if ( Objects.nonNull( notification.getDate( ) ) )
         {
-            metadata.put( NOTIFICATION_METADATA_DATE, notification.getDate( ).toString( ) );
+            Instant instant = Instant.ofEpochMilli(notification.getDate());
+            LocalDateTime localDateTime = LocalDateTime.ofInstant(instant, ZoneId.systemDefault());
+            String formattedDate = localDateTime.format(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss"));
+            metadata.put( NOTIFICATION_METADATA_DATE, formattedDate );
         }
         return metadata;
     }
