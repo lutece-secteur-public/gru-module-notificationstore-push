@@ -3,11 +3,5 @@
 <beans xmlns="http://www.springframework.org/schema/beans"
        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
        xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd" >
-
-
-    <bean id="notificationstorepush.messagingservice" class="fr.paris.lutece.modules.notificationstorepush.service.MessagingService" />
-
-    <bean id="notificationstorepush.notificationlistener" class="fr.paris.lutece.modules.notificationstorepush.business.NotificationListener" />
-
-
+    <bean id="notificationstorepush.notificationlistener" class="fr.paris.lutece.modules.notificationstorepush.listeners.PushNotificationListener" />
 </beans>

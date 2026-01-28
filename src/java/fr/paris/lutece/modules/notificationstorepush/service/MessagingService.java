@@ -40,55 +40,68 @@ import com.google.firebase.messaging.BatchResponse;
 import com.google.firebase.messaging.FirebaseMessaging;
 import com.google.firebase.messaging.FirebaseMessagingException;
 import com.google.firebase.messaging.MulticastMessage;
-import fr.paris.lutece.modules.notificationstorepush.business.NotificationListener;
+import com.google.firebase.messaging.Notification;
+import fr.paris.lutece.portal.service.util.AppLogService;
 import fr.paris.lutece.portal.service.util.AppPropertiesService;
 
 import java.io.IOException;
-import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 public class MessagingService
 {
 
-    private static final Logger logger = Logger.getLogger( MessagingService.class.getName( ) );
-
     public static final String SERVICE_ACCOUNT_PATH = AppPropertiesService.getProperty( "module.messaging.serviceAccount.path" );
+    private static MessagingService _instance;
 
     private MessagingService( )
     {
         try
         {
-            final InputStream serviceAccountStream = NotificationListener.class.getClassLoader( ).getResourceAsStream( SERVICE_ACCOUNT_PATH );
-            if ( Objects.nonNull( serviceAccountStream ) )
+            final Path serviceAccountPath = Paths.get( SERVICE_ACCOUNT_PATH );
+            if ( Files.exists( serviceAccountPath ) )
             {
-                final FirebaseOptions options = FirebaseOptions.builder( ).setCredentials( GoogleCredentials.fromStream( serviceAccountStream ) ).build( );
+                final FirebaseOptions options = FirebaseOptions.builder( )
+                        .setCredentials( GoogleCredentials.fromStream( Files.newInputStream( serviceAccountPath ) ) )
+                        .build( );
                 FirebaseApp.initializeApp( options );
+                AppLogService.info("Successfully configured Firebase Application");
             }
             else
             {
-                logger.log( Level.SEVERE, "ServiceAccount file not found in the resources directory" );
+                AppLogService.error( "ServiceAccount file not found in the resources directory" );
             }
         }
-        catch( IOException e )
+        catch( final IOException e )
         {
-            logger.log( Level.SEVERE, "Problem while trying to fetch properties.", e );
+            AppLogService.error( "Problem while trying to read ServiceAccount file.", e );
         }
+    }
+
+    public static MessagingService instance()
+    {
+        if(_instance == null)
+        {
+            _instance = new MessagingService();
+        }
+        return _instance;
     }
 
     public void send( final List<String> registrationTokens, final String title, final String body, final Map<String, String> metadata )
             throws FirebaseMessagingException
     {
-        MulticastMessage message = MulticastMessage.builder( )
-                .setNotification( com.google.firebase.messaging.Notification.builder( ).setTitle( title ).setBody( body ).build( ) ).putAllData( metadata )
+        final Notification notification = Notification.builder().setTitle(title).setBody(body).build();
+        final MulticastMessage message = MulticastMessage.builder( )
+                .setNotification(notification)
+                .putAllData( metadata )
                 .addAllTokens( registrationTokens ).build( );
-        BatchResponse response = FirebaseMessaging.getInstance( ).sendEachForMulticast( message );
+        final BatchResponse response = FirebaseMessaging.getInstance( ).sendEachForMulticast( message );
         if ( response.getFailureCount( ) > 0 )
         {
-            logger.log( Level.WARNING, "{0} notifications in failure", response.getFailureCount( ) );
+            AppLogService.error( "{0} notifications in failure", response.getFailureCount( ) );
         }
     }
 }

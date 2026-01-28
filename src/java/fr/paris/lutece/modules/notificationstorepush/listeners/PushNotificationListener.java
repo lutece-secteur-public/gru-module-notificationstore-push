@@ -31,7 +31,7 @@
  *
  * License 1.0
  */
-package fr.paris.lutece.modules.notificationstorepush.business;
+package fr.paris.lutece.modules.notificationstorepush.listeners;
 
 import com.google.firebase.messaging.FirebaseMessagingException;
 import fr.paris.lutece.modules.notificationstorepush.service.MessagingService;
@@ -44,12 +44,11 @@ import fr.paris.lutece.plugins.grubusiness.business.notification.INotificationLi
 import fr.paris.lutece.plugins.grubusiness.business.notification.MyDashboardNotification;
 import fr.paris.lutece.plugins.grubusiness.business.notification.Notification;
 import fr.paris.lutece.plugins.notificationstore.business.DemandTypeHome;
+import fr.paris.lutece.portal.service.spring.SpringContextService;
+import fr.paris.lutece.portal.service.util.AppLogService;
 import fr.paris.lutece.portal.service.util.AppPropertiesService;
 
-import javax.inject.Inject;
-import javax.inject.Named;
 import javax.persistence.EntityNotFoundException;
-import java.sql.Timestamp;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -58,23 +57,15 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
-public class NotificationListener implements INotificationListener
+public class PushNotificationListener implements INotificationListener
 {
-
-    private static final Logger logger = Logger.getLogger( NotificationListener.class.getName( ) );
     private static final String DEFAULT_ISSUER = AppPropertiesService.getProperty( "module.notificationstore.defaultIssuer" );
     public static final String NOTIFICATION_METADATA_DEMAND_ID = "demand_id";
     public static final String NOTIFICATION_METADATA_TYPE_ID = "type_id";
     public static final String NOTIFICATION_METADATA_CUID = "CUID";
     public static final String NOTIFICATION_METADATA_GUID = "GUID";
     public static final String NOTIFICATION_METADATA_DATE = "date";
-
-    @Inject
-    @Named( "notificationstorepush.messagingservice" )
-    private MessagingService messagingService;
 
     @Override
     public void onCreateNotification( final Notification notification )
@@ -101,17 +92,16 @@ public class NotificationListener implements INotificationListener
                         body = myDashboardNotification.getSubject( );
                     }
 
-                    final Map<String, String> metadata = prepareMetaDataFromNotification( notification );
-
-                    messagingService.send( registrationTokens, demandType.getLabel( ), body, metadata );
+                    final Map<String, String> metadata = this.prepareMetaDataFromNotification( notification );
+                    MessagingService.instance().send( registrationTokens, demandType.getLabel( ), body, metadata );
                 }
-                catch( DeviceRegistrationException e )
+                catch( final DeviceRegistrationException e )
                 {
-                    logger.log( Level.WARNING, "Error while retrieving user token with message : {0}", e.getMessage( ) );
+                    AppLogService.error( "Error while retrieving user token with message : {}", e.getMessage( ) );
                 }
-                catch( FirebaseMessagingException e )
+                catch( final FirebaseMessagingException e )
                 {
-                    logger.log( Level.WARNING, "Error while sending message : {0}", e.getMessage( ) );
+                    AppLogService.error( "Error while sending message : {}", e.getMessage( ) );
                 }
 
             }
@@ -121,7 +111,7 @@ public class NotificationListener implements INotificationListener
 
     private Map<String, String> prepareMetaDataFromNotification( final Notification notification )
     {
-        Map<String, String> metadata = new HashMap<>( );
+        final Map<String, String> metadata = new HashMap<>( );
         final Demand demand = notification.getDemand( );
         metadata.put( NOTIFICATION_METADATA_DEMAND_ID, demand.getId( ) );
         metadata.put( NOTIFICATION_METADATA_TYPE_ID, demand.getTypeId( ) );
@@ -136,9 +126,9 @@ public class NotificationListener implements INotificationListener
         }
         if ( Objects.nonNull( notification.getDate( ) ) )
         {
-            Instant instant = Instant.ofEpochMilli(notification.getDate());
-            LocalDateTime localDateTime = LocalDateTime.ofInstant(instant, ZoneId.systemDefault());
-            String formattedDate = localDateTime.format(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss"));
+            final Instant instant = Instant.ofEpochMilli( notification.getDate( ) );
+            final LocalDateTime localDateTime = LocalDateTime.ofInstant( instant, ZoneId.systemDefault( ) );
+            final String formattedDate = localDateTime.format( DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss") );
             metadata.put( NOTIFICATION_METADATA_DATE, formattedDate );
         }
         return metadata;
@@ -147,13 +137,13 @@ public class NotificationListener implements INotificationListener
     @Override
     public void onUpdateNotification( Notification notification )
     {
-        logger.info( "Operation not permitted" );
+        // No operation
     }
 
     @Override
     public void onDeleteDemand( String s, String s1 )
     {
-        logger.info( "Operation not permitted" );
+        // No operation
     }
 
 }
