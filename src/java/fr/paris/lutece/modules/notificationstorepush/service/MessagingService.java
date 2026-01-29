@@ -54,7 +54,7 @@ import java.util.Map;
 public class MessagingService
 {
 
-    public static final String SERVICE_ACCOUNT_PATH = AppPropertiesService.getProperty( "module.messaging.serviceAccount.path" );
+    public static final String SERVICE_ACCOUNT_PATH = AppPropertiesService.getProperty( "notificationstorepush.messaging.serviceAccount.path" );
     private static MessagingService _instance;
 
     private MessagingService( )

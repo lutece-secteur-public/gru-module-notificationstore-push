@@ -44,7 +44,6 @@ import fr.paris.lutece.plugins.grubusiness.business.notification.INotificationLi
 import fr.paris.lutece.plugins.grubusiness.business.notification.MyDashboardNotification;
 import fr.paris.lutece.plugins.grubusiness.business.notification.Notification;
 import fr.paris.lutece.plugins.notificationstore.business.DemandTypeHome;
-import fr.paris.lutece.portal.service.spring.SpringContextService;
 import fr.paris.lutece.portal.service.util.AppLogService;
 import fr.paris.lutece.portal.service.util.AppPropertiesService;
 
@@ -60,7 +59,9 @@ import java.util.Objects;
 
 public class PushNotificationListener implements INotificationListener
 {
-    private static final String DEFAULT_ISSUER = AppPropertiesService.getProperty( "module.notificationstore.defaultIssuer" );
+    private static final String DEFAULT_ISSUER = AppPropertiesService.getProperty( "notificationstorepush.messaging.defaultIssuer" );
+    private static final String PUSH_DEFAULT_SUBJECT = AppPropertiesService.getProperty( "notificationstorepush.messaging.push.default.subject" );
+    private static final boolean PUSH_ENABLED = AppPropertiesService.getPropertyBoolean( "notificationstorepush.messaging.push.enabled", false );
     public static final String NOTIFICATION_METADATA_DEMAND_ID = "demand_id";
     public static final String NOTIFICATION_METADATA_TYPE_ID = "type_id";
     public static final String NOTIFICATION_METADATA_CUID = "CUID";
@@ -76,7 +77,7 @@ public class PushNotificationListener implements INotificationListener
             final DemandType demandType = DemandTypeHome.getDemandType( typeId )
                     .orElseThrow( ( ) -> new EntityNotFoundException( "Demandtype not found with id " + typeId ) );
 
-            if ( demandType.isPushEnable( ) )
+            if ( PUSH_ENABLED && !demandType.isPushDisabled( ) )
             {
                 try
                 {
@@ -85,7 +86,7 @@ public class PushNotificationListener implements INotificationListener
                             customer.getConnectionId( ), DEFAULT_ISSUER );
 
                     final MyDashboardNotification myDashboardNotification = notification.getMyDashboardNotification( );
-                    String body = demandType.getDefaultSubject( );
+                    String body = demandType.getDefaultSubject( ) != null ? demandType.getDefaultSubject() : PUSH_DEFAULT_SUBJECT;
 
                     if ( Objects.nonNull( myDashboardNotification ) && !myDashboardNotification.getSubject( ).isEmpty( ) )
                     {
