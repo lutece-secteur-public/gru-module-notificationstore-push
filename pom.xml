@@ -84,5 +84,13 @@
                 </configuration>
             </plugin>
         </plugins>
-    </build>
+</build>
+
+    <scm>
+        <connection>scm:git:https://github.com/lutece-secteur-public/gru-module-notificationstore-push.git</connection>
+        <developerConnection>scm:git:https://github.com/lutece-secteur-public/gru-module-notificationstore-push.git</developerConnection>
+        <url>https://github.com/lutece-secteur-public/gru-module-notificationstore-push.git</url>
+        <tag>HEAD</tag>
+    </scm>
+
 </project>
