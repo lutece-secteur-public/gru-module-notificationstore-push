@@ -33,7 +33,17 @@
  */
 package fr.paris.lutece.modules.notificationstorepush.listeners;
 
-import com.google.firebase.messaging.FirebaseMessagingException;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+
+import fr.paris.lutece.modules.notificationstorepush.business.PushMessagingException;
 import fr.paris.lutece.modules.notificationstorepush.service.MessagingService;
 import fr.paris.lutece.plugins.deviceregistration.exception.DeviceRegistrationException;
 import fr.paris.lutece.plugins.deviceregistration.service.DeviceRegistrationService;
@@ -43,25 +53,15 @@ import fr.paris.lutece.plugins.grubusiness.business.demand.DemandType;
 import fr.paris.lutece.plugins.grubusiness.business.notification.INotificationListener;
 import fr.paris.lutece.plugins.grubusiness.business.notification.MyDashboardNotification;
 import fr.paris.lutece.plugins.grubusiness.business.notification.Notification;
-import fr.paris.lutece.plugins.notificationstore.business.DemandTypeHome;
+import fr.paris.lutece.plugins.notificationstore.service.DemandTypeService;
 import fr.paris.lutece.portal.service.util.AppLogService;
 import fr.paris.lutece.portal.service.util.AppPropertiesService;
-
-import javax.persistence.EntityNotFoundException;
-import java.time.Instant;
-import java.time.LocalDateTime;
-import java.time.ZoneId;
-import java.time.format.DateTimeFormatter;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
 
 public class PushNotificationListener implements INotificationListener
 {
     private static final String DEFAULT_ISSUER = AppPropertiesService.getProperty( "notificationstorepush.messaging.defaultIssuer" );
     private static final String PUSH_DEFAULT_SUBJECT = AppPropertiesService.getProperty( "notificationstorepush.messaging.push.default.subject" );
-    private static final boolean PUSH_ENABLED = AppPropertiesService.getPropertyBoolean( "notificationstorepush.messaging.push.enabled", false );
+    private static final boolean IS_PUSH_ENABLED = AppPropertiesService.getPropertyBoolean( "notificationstorepush.messaging.push.enabled", false );
     public static final String NOTIFICATION_METADATA_DEMAND_ID = "demand_id";
     public static final String NOTIFICATION_METADATA_TYPE_ID = "type_id";
     public static final String NOTIFICATION_METADATA_CUID = "CUID";
@@ -71,80 +71,120 @@ public class PushNotificationListener implements INotificationListener
     @Override
     public void onCreateNotification( final Notification notification )
     {
-        if ( Objects.nonNull( notification ) && Objects.nonNull( notification.getDemand( ) ) && Objects.nonNull( notification.getDemand( ).getCustomer( ) ) )
-        {
-            final String typeId = notification.getDemand( ).getTypeId( );
-            final DemandType demandType = DemandTypeHome.getDemandType( typeId )
-                    .orElseThrow( ( ) -> new EntityNotFoundException( "Demandtype not found with id " + typeId ) );
+	if ( !IS_PUSH_ENABLED )
+	{
+	    return;
+	}
 
-            if ( PUSH_ENABLED && !demandType.isPushDisabled( ) )
-            {
-                try
-                {
-                    final Customer customer = notification.getDemand( ).getCustomer( );
-                    final List<String> registrationTokens = DeviceRegistrationService.getInstance( ).getRegistrationTokensByCriteria( customer.getCustomerId( ),
-                            customer.getConnectionId( ), DEFAULT_ISSUER );
+	if ( Objects.isNull( notification ) || Objects.isNull( notification.getDemand( ) ) )
+	{
+	    AppLogService.error( "Error while trying to push a Notification : null" );
+	    return ;
+	}
 
-                    final MyDashboardNotification myDashboardNotification = notification.getMyDashboardNotification( );
-                    String body = demandType.getDefaultSubject( ) != null ? demandType.getDefaultSubject() : PUSH_DEFAULT_SUBJECT;
+	if ( Objects.isNull( notification.getMyDashboardNotification( ) ) )
+	{
+	    // only MyDashBoardNotifications are pushed
+	    return;
+	}
 
-                    if ( Objects.nonNull( myDashboardNotification ) && !myDashboardNotification.getSubject( ).isEmpty( ) )
-                    {
-                        body = myDashboardNotification.getSubject( );
-                    }
+	final Optional<DemandType> optDemandType = DemandTypeService.instance( ).getDemandType( notification.getDemand( ).getTypeId( ) );
+	
+	if ( optDemandType.isEmpty( ) )
+	{
+	    AppLogService.error( "DemandType {} not found", notification.getDemand( ).getTypeId( ) );
+	    return ;
+	}
+		
 
-                    final Map<String, String> metadata = this.prepareMetaDataFromNotification( notification );
-                    MessagingService.instance().send( registrationTokens, demandType.getLabel( ), body, metadata );
-                }
-                catch( final DeviceRegistrationException e )
-                {
-                    AppLogService.error( "Error while retrieving user token with message : {}", e.getMessage( ) );
-                }
-                catch( final FirebaseMessagingException e )
-                {
-                    AppLogService.error( "Error while sending message : {}", e.getMessage( ) );
-                }
+	if ( optDemandType.get( ).isPushDisabled( ) )
+	{
+	    // push disabled for this demand_type_id
+	    return;
+	}
 
-            }
-        }
+	if ( Objects.isNull( notification.getDemand( ).getCustomer( ) ) )
+	{
+	    AppLogService.debug( "No Customer found to push Notification : {}", notification.toString( ) );
+	    return;
+	}
+
+	try
+	{
+	    DemandType demandType = optDemandType.get( );
+	    final Customer customer = notification.getDemand( ).getCustomer( );
+	    final List<String> registrationTokens = DeviceRegistrationService.getInstance( ).getRegistrationTokensByCriteria( customer.getCustomerId( ),
+		    customer.getConnectionId( ), DEFAULT_ISSUER );
+
+	    if ( registrationTokens.isEmpty( ) )
+	    {
+		// no device registred for the user
+		return;
+	    }
+	    
+	    final MyDashboardNotification myDashboardNotification = notification.getMyDashboardNotification( );
+	    String body = demandType.getDefaultSubject( ) != null ? demandType.getDefaultSubject() : PUSH_DEFAULT_SUBJECT;
+
+	    if ( !myDashboardNotification.getSubject( ).isEmpty( ) )
+	    {
+		body = myDashboardNotification.getSubject( );
+	    }
+
+	    final Map<String, String> metadata = this.prepareMetaDataFromNotification( notification );
+	    
+	    // Push !
+	    MessagingService.instance().send( registrationTokens, demandType.getLabel( ), body, metadata );
+	    
+	}
+	catch( final DeviceRegistrationException e )
+	{
+	    AppLogService.error( "Error while retrieving user token with message : {}", e.getMessage( ) );
+	}
+	catch( final PushMessagingException e )
+	{
+	    AppLogService.error( "Error while sending message : {}", e.getMessage( ) );
+	}
 
     }
 
+    /**
+     * get push notification metadata
+     *  
+     * @param notification
+     * @return the map of metadata
+     */
     private Map<String, String> prepareMetaDataFromNotification( final Notification notification )
     {
-        final Map<String, String> metadata = new HashMap<>( );
-        final Demand demand = notification.getDemand( );
-        metadata.put( NOTIFICATION_METADATA_DEMAND_ID, demand.getId( ) );
-        metadata.put( NOTIFICATION_METADATA_TYPE_ID, demand.getTypeId( ) );
-        final Customer customer = demand.getCustomer( );
-        if ( Objects.nonNull( customer.getCustomerId( ) ) )
-        {
-            metadata.put( NOTIFICATION_METADATA_CUID, customer.getCustomerId( ) );
-        }
-        if ( Objects.nonNull( customer.getConnectionId( ) ) )
-        {
-            metadata.put( NOTIFICATION_METADATA_GUID, customer.getConnectionId( ) );
-        }
-        if ( Objects.nonNull( notification.getDate( ) ) )
-        {
-            final Instant instant = Instant.ofEpochMilli( notification.getDate( ) );
-            final LocalDateTime localDateTime = LocalDateTime.ofInstant( instant, ZoneId.systemDefault( ) );
-            final String formattedDate = localDateTime.format( DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss") );
-            metadata.put( NOTIFICATION_METADATA_DATE, formattedDate );
-        }
-        return metadata;
+	final Map<String, String> metadata = new HashMap<>( );
+	final Demand demand = notification.getDemand( );
+	metadata.put( NOTIFICATION_METADATA_DEMAND_ID, demand.getId( ) );
+	metadata.put( NOTIFICATION_METADATA_TYPE_ID, demand.getTypeId( ) );
+	final Customer customer = demand.getCustomer( );
+	if ( Objects.nonNull( customer.getCustomerId( ) ) )
+	{
+	    metadata.put( NOTIFICATION_METADATA_CUID, customer.getCustomerId( ) );
+	}
+	if ( Objects.nonNull( customer.getConnectionId( ) ) )
+	{
+	    metadata.put( NOTIFICATION_METADATA_GUID, customer.getConnectionId( ) );
+	}
+	if ( Objects.nonNull( notification.getDate( ) ) )
+	{
+	    metadata.put( NOTIFICATION_METADATA_DATE, String.valueOf( notification.getDate( ) ) );
+	}
+	return metadata;
     }
 
     @Override
     public void onUpdateNotification( Notification notification )
     {
-        // No operation
+	// No operation
     }
 
     @Override
     public void onDeleteDemand( String s, String s1 )
     {
-        // No operation
+	// No operation
     }
 
 }

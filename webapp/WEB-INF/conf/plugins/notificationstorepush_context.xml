@@ -4,4 +4,10 @@
        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
        xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd" >
     <bean id="notificationstorepush.notificationlistener" class="fr.paris.lutece.modules.notificationstorepush.listeners.PushNotificationListener" />
+    
+    <bean id="notificationstorepush.messagingService" class="fr.paris.lutece.modules.notificationstorepush.service.FireBaseMessagingService" />
+    
+    <!-- Mock available for tests -->
+    <!-- <bean id="notificationstorepush.messagingService" class="fr.paris.lutece.modules.notificationstorepush.service.MockMessagingService" />  -->
+    
 </beans>
