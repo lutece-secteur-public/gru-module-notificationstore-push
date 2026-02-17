@@ -66,7 +66,7 @@ public class PushNotificationListener implements INotificationListener
     public static final String NOTIFICATION_METADATA_TYPE_ID = "type_id";
     public static final String NOTIFICATION_METADATA_CUID = "CUID";
     public static final String NOTIFICATION_METADATA_GUID = "GUID";
-    public static final String NOTIFICATION_METADATA_DATE = "date";
+    public static final String NOTIFICATION_METADATA_DATE = "notificationDate";
 
     @Override
     public void onCreateNotification( final Notification notification )
