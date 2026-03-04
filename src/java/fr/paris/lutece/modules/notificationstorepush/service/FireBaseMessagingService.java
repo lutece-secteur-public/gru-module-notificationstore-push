@@ -1,11 +1,14 @@
 package fr.paris.lutece.modules.notificationstorepush.service;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
 import java.util.Map;
+
+import org.apache.commons.lang3.StringUtils;
 
 import com.google.auth.oauth2.GoogleCredentials;
 import com.google.firebase.FirebaseApp;
@@ -20,11 +23,12 @@ import fr.paris.lutece.modules.notificationstorepush.business.IPushMessagingServ
 import fr.paris.lutece.modules.notificationstorepush.business.PushMessagingException;
 import fr.paris.lutece.portal.service.util.AppLogService;
 import fr.paris.lutece.portal.service.util.AppPropertiesService;
+import fr.paris.lutece.util.string.StringUtil;
 
 public class FireBaseMessagingService implements IPushMessagingService
 {
 
-    public static final String SERVICE_ACCOUNT_PATH = AppPropertiesService.getProperty( "notificationstorepush.messaging.serviceAccount.path" );
+    public static final String SERVICE_ACCOUNT_PROPERTY = "notificationstorepush.messaging.serviceAccount.json" ;
    
     /**
      * init
@@ -33,23 +37,23 @@ public class FireBaseMessagingService implements IPushMessagingService
     {
         try
         {
-            final Path serviceAccountPath = Paths.get( SERVICE_ACCOUNT_PATH );
-            if ( Files.exists( serviceAccountPath ) )
+            final String serviceAccount = AppPropertiesService.getProperty( SERVICE_ACCOUNT_PROPERTY );
+            if ( !StringUtils.isEmpty( serviceAccount ) )
             {
                 final FirebaseOptions options = FirebaseOptions.builder( )
-                        .setCredentials( GoogleCredentials.fromStream( Files.newInputStream( serviceAccountPath ) ) )
+                        .setCredentials( GoogleCredentials.fromStream(  new ByteArrayInputStream( serviceAccount.getBytes( ) ) ) )
                         .build( );
                 FirebaseApp.initializeApp( options );
                 AppLogService.info("Successfully configured Firebase Application");
             }
             else
             {
-                AppLogService.error( "ServiceAccount file not found in the resources directory" );
+                AppLogService.error( "ServiceAccount not found in properties" );
             }
         }
         catch( final IOException e )
         {
-            AppLogService.error( "Problem while trying to read ServiceAccount file.", e );
+            AppLogService.error( "Problem while trying to read ServiceAccount credentials.", e );
         }
     }
 
