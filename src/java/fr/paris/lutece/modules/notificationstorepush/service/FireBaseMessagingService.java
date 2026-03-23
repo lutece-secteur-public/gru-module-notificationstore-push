@@ -29,55 +29,60 @@ public class FireBaseMessagingService implements IPushMessagingService
 {
 
     public static final String SERVICE_ACCOUNT_PROPERTY = "notificationstorepush.messaging.serviceAccount.json" ;
-   
+
     /**
      * init
      */
     private FireBaseMessagingService( )
     {
-        try
-        {
-            final String serviceAccount = AppPropertiesService.getProperty( SERVICE_ACCOUNT_PROPERTY );
-            if ( !StringUtils.isEmpty( serviceAccount ) )
-            {
-                final FirebaseOptions options = FirebaseOptions.builder( )
-                        .setCredentials( GoogleCredentials.fromStream(  new ByteArrayInputStream( serviceAccount.getBytes( ) ) ) )
-                        .build( );
-                FirebaseApp.initializeApp( options );
-                AppLogService.info("Successfully configured Firebase Application");
-            }
-            else
-            {
-                AppLogService.error( "ServiceAccount not found in properties" );
-            }
-        }
-        catch( final Exception e )
-        {
-            AppLogService.error( "Problem while trying to initialize ServiceAccount", e );
-        }
+	try
+	{
+	    final String serviceAccount = AppPropertiesService.getProperty( SERVICE_ACCOUNT_PROPERTY );
+	    if ( !StringUtils.isEmpty( serviceAccount ) )
+	    {
+		final FirebaseOptions options = FirebaseOptions.builder( )
+			.setCredentials( GoogleCredentials.fromStream(  new ByteArrayInputStream( serviceAccount.getBytes( ) ) ) )
+			.build( );
+		FirebaseApp.initializeApp( options );
+		AppLogService.info("Successfully configured Firebase Application");
+	    }
+	    else
+	    {
+		AppLogService.error( "ServiceAccount not found in properties" );
+	    }
+	}
+	catch( final Exception e )
+	{
+	    AppLogService.error( "Problem while trying to initialize ServiceAccount", e );
+	}
     }
 
 
     public void send( final List<String> registrationTokens, final String title, final String body, final Map<String, String> metadata )
-            throws PushMessagingException
+	    throws PushMessagingException
     {
 	try
 	{
-	       final Notification notification = Notification.builder().setTitle(title).setBody(body).build();
-	        final MulticastMessage message = MulticastMessage.builder( )
-	                .setNotification(notification)
-	                .putAllData( metadata )
-	                .addAllTokens( registrationTokens ).build( );
-	        final BatchResponse response = FirebaseMessaging.getInstance( ).sendEachForMulticast( message );
-	        if ( response.getFailureCount( ) > 0 )
-	        {
-	            AppLogService.error( "{0} notifications in failure", response.getFailureCount( ) );
-	        }
+	    AppLogService.debug( "Try to send push notification : {} / to [{}]", title, registrationTokens );
+
+	    final Notification notification = Notification.builder().setTitle(title).setBody(body).build();
+	    final MulticastMessage message = MulticastMessage.builder( )
+		    .setNotification(notification)
+		    .putAllData( metadata )
+		    .addAllTokens( registrationTokens ).build( );
+	    final BatchResponse response = FirebaseMessaging.getInstance( ).sendEachForMulticast( message );
+
+	    AppLogService.debug( "FireBaseMessaging response : success={} / failures={} / responses={}", response.getSuccessCount( ), response.getFailureCount( ), response.getResponses( ) );
+
+	    if ( response.getFailureCount( ) > 0 )
+	    {
+		AppLogService.error( "{} notifications in failure : ", response.getFailureCount( ), response.getResponses( ) );
+	    }
 	}
 	catch ( FirebaseMessagingException e)
 	{
 	    throw new PushMessagingException( "Push Messaging Service Error", e );
 	}
- 
+
     }
 }
