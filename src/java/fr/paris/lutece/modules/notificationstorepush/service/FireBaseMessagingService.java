@@ -51,9 +51,9 @@ public class FireBaseMessagingService implements IPushMessagingService
                 AppLogService.error( "ServiceAccount not found in properties" );
             }
         }
-        catch( final IOException e )
+        catch( final Exception e )
         {
-            AppLogService.error( "Problem while trying to read ServiceAccount credentials.", e );
+            AppLogService.error( "Problem while trying to initialize ServiceAccount", e );
         }
     }
 
