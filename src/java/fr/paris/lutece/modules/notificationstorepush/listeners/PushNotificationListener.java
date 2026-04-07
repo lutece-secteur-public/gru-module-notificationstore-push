@@ -71,10 +71,15 @@ public class PushNotificationListener implements INotificationListener
     @Override
     public void onCreateNotification( final Notification notification )
     {
+	AppLogService.debug( "PushNotificationListener.onCreateNotification FIRED" );
+	
 	if ( !IS_PUSH_ENABLED )
 	{
+	    AppLogService.debug( "PushNotificationListener : PUSH mode disabled" );
 	    return;
 	}
+	
+	AppLogService.debug( "PushNotificationListener : PUSH mode enabled" );
 
 	if ( Objects.isNull( notification ) || Objects.isNull( notification.getDemand( ) ) )
 	{
@@ -100,6 +105,7 @@ public class PushNotificationListener implements INotificationListener
 	if ( optDemandType.get( ).isPushDisabled( ) )
 	{
 	    // push disabled for this demand_type_id
+	    AppLogService.debug( "PushNotificationListener : PUSH mode disabled for this demand_type_id" );
 	    return;
 	}
 
@@ -119,7 +125,15 @@ public class PushNotificationListener implements INotificationListener
 	    if ( registrationTokens.isEmpty( ) )
 	    {
 		// no device registred for the user
+		AppLogService.debug( "No device registred for the user : cuid={} / guid={}", customer.getCustomerId( ), customer.getConnectionId( ) );
 		return;
+	    }
+	    else
+	    {
+		// found devices 
+		AppLogService.debug( "Device registred for the user : cuid={} / guid={} / token={}", 
+			customer.getCustomerId( ), customer.getConnectionId( ), registrationTokens );
+				
 	    }
 	    
 	    final MyDashboardNotification myDashboardNotification = notification.getMyDashboardNotification( );

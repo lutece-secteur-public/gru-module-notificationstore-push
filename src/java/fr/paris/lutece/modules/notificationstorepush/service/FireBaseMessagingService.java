@@ -18,6 +18,7 @@ import com.google.firebase.messaging.FirebaseMessaging;
 import com.google.firebase.messaging.FirebaseMessagingException;
 import com.google.firebase.messaging.MulticastMessage;
 import com.google.firebase.messaging.Notification;
+import com.google.firebase.messaging.SendResponse;
 
 import fr.paris.lutece.modules.notificationstorepush.business.IPushMessagingService;
 import fr.paris.lutece.modules.notificationstorepush.business.PushMessagingException;
@@ -76,7 +77,16 @@ public class FireBaseMessagingService implements IPushMessagingService
 
 	    if ( response.getFailureCount( ) > 0 )
 	    {
-		AppLogService.error( "{} notifications in failure : ", response.getFailureCount( ), response.getResponses( ) );
+		StringBuilder err = new StringBuilder( );
+		
+		for ( SendResponse resp : response.getResponses( ) )
+		{
+		    if ( !resp.isSuccessful( ) )
+		    {
+			err.append( resp.getException( ).getLocalizedMessage( ) ).append(  " / " );
+		    }
+		}
+		AppLogService.error( "{} fireBase failure count : {} ", response.getFailureCount( ), err );
 	    }
 	}
 	catch ( FirebaseMessagingException e)
