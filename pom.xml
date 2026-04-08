@@ -11,7 +11,7 @@
     <groupId>fr.paris.lutece.plugins</groupId>
     <artifactId>module-notificationstorepush</artifactId>
     <packaging>lutece-plugin</packaging>
-    <version>1.0.2-SNAPSHOT</version>
+    <version>1.0.2</version>
     <name>Lutece notificationstorepush module</name>
 
     <repositories>
@@ -90,7 +90,7 @@
         <connection>scm:git:https://github.com/lutece-secteur-public/gru-module-notificationstore-push.git</connection>
         <developerConnection>scm:git:https://github.com/lutece-secteur-public/gru-module-notificationstore-push.git</developerConnection>
         <url>https://github.com/lutece-secteur-public/gru-module-notificationstore-push.git</url>
-        <tag>HEAD</tag>
+        <tag>module-notificationstorepush-1.0.2</tag>
     </scm>
 
 </project>
