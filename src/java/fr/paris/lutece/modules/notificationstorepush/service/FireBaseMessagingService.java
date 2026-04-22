@@ -89,7 +89,7 @@ public class FireBaseMessagingService implements IPushMessagingService
 		AppLogService.error( "{} fireBase failure count : {} ", response.getFailureCount( ), err );
 	    }
 	}
-	catch ( FirebaseMessagingException e)
+	catch ( Exception e)
 	{
 	    throw new PushMessagingException( "Push Messaging Service Error", e );
 	}

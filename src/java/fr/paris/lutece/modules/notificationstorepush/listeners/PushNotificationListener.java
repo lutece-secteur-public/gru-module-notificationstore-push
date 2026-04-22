@@ -158,6 +158,11 @@ public class PushNotificationListener implements INotificationListener
 	{
 	    AppLogService.error( "Error while sending message : {}", e.getMessage( ) );
 	}
+	catch( final Exception e )
+	{
+	    AppLogService.error( "Error PushNotification Listener : {}", e.getMessage( ) );
+	}
+
 
     }
 
